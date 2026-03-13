@@ -1,0 +1,173 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.email == "gabrielcrazzylife@gmail.com" && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isTeacher() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    function getUserSchoolId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidSchool(data) {
+      return data.keys().hasAll(['name', 'inviteCode', 'createdAt', 'creatorId']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.inviteCode is string && data.inviteCode.size() > 0 && data.inviteCode.size() <= 20 &&
+             data.createdAt is timestamp &&
+             data.creatorId is string &&
+             (!('academicYearStart' in data) || (data.academicYearStart is string && data.academicYearStart.size() == 10)) &&
+             (!('academicYearEnd' in data) || (data.academicYearEnd is string && data.academicYearEnd.size() == 10)) &&
+             (!('logo' in data) || data.logo is string);
+    }
+
+    function isValidGrade(data) {
+      return data.keys().hasAll(['schoolId', 'classId', 'studentId', 'bimester']) &&
+             data.schoolId is string && data.schoolId.size() > 0 &&
+             data.classId is string && data.classId.size() > 0 &&
+             data.studentId is string && data.studentId.size() > 0 &&
+             data.bimester is number && data.bimester >= 1 && data.bimester <= 4 &&
+             (!('n1' in data) || data.n1 is number) &&
+             (!('n2' in data) || data.n2 is number) &&
+             (!('n3' in data) || data.n3 is number) &&
+             (!('recovery' in data) || data.recovery is number) &&
+             (!('average' in data) || data.average is number);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'role', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.role in ['admin', 'teacher'] &&
+             (!('schoolId' in data) || data.schoolId is string) &&
+             data.createdAt is string;
+    }
+
+    function isValidClass(data) {
+      return data.keys().hasAll(['name', 'schoolId']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.schoolId is string && data.schoolId.size() > 0 &&
+             (!('teacherIds' in data) || data.teacherIds is list);
+    }
+
+    function isValidStudent(data) {
+      return data.keys().hasAll(['name', 'classId', 'schoolId']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.classId is string && data.classId.size() > 0 &&
+             data.schoolId is string && data.schoolId.size() > 0 &&
+             (!('enrollmentNumber' in data) || (data.enrollmentNumber is string && data.enrollmentNumber.size() <= 50));
+    }
+
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['classId', 'schoolId', 'date', 'teacherId', 'records']) &&
+             data.classId is string && data.classId.size() > 0 &&
+             data.schoolId is string && data.schoolId.size() > 0 &&
+             data.date is string && data.date.size() > 0 &&
+             data.teacherId is string && data.teacherId.size() > 0 &&
+             data.records is map;
+    }
+
+    function isValidLesson(data) {
+      return data.keys().hasAll(['classId', 'schoolId', 'date', 'content', 'teacherId']) &&
+             data.classId is string && data.classId.size() > 0 &&
+             data.schoolId is string && data.schoolId.size() > 0 &&
+             data.date is string && data.date.size() > 0 &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.teacherId is string && data.teacherId.size() > 0;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidSchool(request.resource.data);
+      allow update: if (isAdmin() && getUserSchoolId() == schoolId && isValidSchool(request.resource.data)) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == 'teacher') || isSuperAdmin() || isAdmin() || (isOwner(userId) && request.resource.data.role == 'admin'));
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (
+                      (isOwner(userId) && request.resource.data.role == resource.data.role && (!('schoolId' in resource.data) || request.resource.data.schoolId == resource.data.schoolId)) || 
+                      isSuperAdmin() ||
+                      (isAdmin() && getUserSchoolId() == resource.data.schoolId && getUserSchoolId() == request.resource.data.schoolId) ||
+                      (isOwner(userId) && !('schoolId' in resource.data) && 'schoolId' in request.resource.data && 
+                        (
+                          request.resource.data.role == 'teacher' || 
+                          (request.resource.data.role == 'admin' && get(/databases/$(database)/documents/schools/$(request.resource.data.schoolId)).data.creatorId == userId)
+                        )
+                      )
+                    );
+      allow delete: if (isAdmin() && getUserSchoolId() == resource.data.schoolId && !isOwner(userId)) || isSuperAdmin();
+    }
+
+    match /classes/{classId} {
+      allow read: if isAuthenticated() && (resource.data.schoolId == getUserSchoolId() || isSuperAdmin());
+      allow create: if (isAdmin() && isValidClass(request.resource.data) && request.resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow update: if (isAdmin() && isValidClass(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAuthenticated() && (resource.data.schoolId == getUserSchoolId() || isSuperAdmin());
+      allow create: if (isAdmin() && isValidStudent(request.resource.data) && request.resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow update: if (isAdmin() && isValidStudent(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated() && (resource.data.schoolId == getUserSchoolId() || isSuperAdmin());
+      allow create: if ((isAdmin() || isTeacher()) && isValidAttendance(request.resource.data) && request.resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow update: if ((isAdmin() || isTeacher()) && isValidAttendance(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+    }
+
+    match /lessons/{lessonId} {
+      allow read: if isAuthenticated() && (resource.data.schoolId == getUserSchoolId() || isSuperAdmin());
+      allow create: if ((isAdmin() || isTeacher()) && isValidLesson(request.resource.data) && request.resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow update: if ((isAdmin() || isTeacher()) && isValidLesson(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+    }
+
+    match /grades/{gradeId} {
+      allow read: if isAuthenticated() && (resource.data.schoolId == getUserSchoolId() || isSuperAdmin());
+      allow create: if ((isAdmin() || isTeacher()) && isValidGrade(request.resource.data) && request.resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow update: if ((isAdmin() || isTeacher()) && isValidGrade(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+    }
+  }
+}

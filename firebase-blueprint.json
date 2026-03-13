@@ -1,0 +1,108 @@
+{
+  "entities": {
+    "School": {
+      "title": "School",
+      "description": "A school in the system",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "inviteCode": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "inviteCode", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user of the system (admin or teacher)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "teacher"] },
+        "schoolId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name", "role", "createdAt"]
+    },
+    "Class": {
+      "title": "Class",
+      "description": "A school class",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "teacherIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "schoolId"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "A student enrolled in a class",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "enrollmentNumber": { "type": "string" },
+        "classId": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "classId", "schoolId"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily attendance record for a class",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "teacherId": { "type": "string" },
+        "records": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["classId", "schoolId", "date", "teacherId", "records"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "Content taught in a class on a specific date",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "content": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["classId", "schoolId", "date", "content", "teacherId"]
+    }
+  },
+  "firestore": {
+    "/schools/{schoolId}": {
+      "schema": { "$ref": "#/entities/School" },
+      "description": "Schools"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/classes/{classId}": {
+      "schema": { "$ref": "#/entities/Class" },
+      "description": "School classes"
+    },
+    "/students/{studentId}": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Students"
+    },
+    "/attendance/{attendanceId}": {
+      "schema": { "$ref": "#/entities/Attendance" },
+      "description": "Attendance records"
+    },
+    "/lessons/{lessonId}": {
+      "schema": { "$ref": "#/entities/Lesson" },
+      "description": "Lesson contents"
+    }
+  }
+}

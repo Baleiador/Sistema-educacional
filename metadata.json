@@ -1,0 +1,5 @@
+{
+  "name": "EduManage - Sistema Escolar",
+  "description": "Sistema de gerenciamento escolar com controle de administradores, professores, turmas, alunos e chamadas.",
+  "requestFramePermissions": []
+}
