@@ -55,6 +55,7 @@ service cloud.firestore {
              data.classId is string && data.classId.size() > 0 &&
              data.studentId is string && data.studentId.size() > 0 &&
              data.bimester is number && data.bimester >= 1 && data.bimester <= 4 &&
+             (!('subject' in data) || data.subject is string) &&
              (!('n1' in data) || data.n1 is number) &&
              (!('n2' in data) || data.n2 is number) &&
              (!('n3' in data) || data.n3 is number) &&
@@ -69,6 +70,7 @@ service cloud.firestore {
              data.name is string && data.name.size() <= 100 &&
              data.role in ['admin', 'teacher'] &&
              (!('schoolId' in data) || data.schoolId is string) &&
+             (!('subjects' in data) || data.subjects is list) &&
              data.createdAt is string;
     }
 

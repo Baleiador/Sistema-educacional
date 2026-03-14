@@ -5,15 +5,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { Printer } from 'lucide-react';
+import { AVAILABLE_SUBJECTS } from '../../utils/subjects';
 
 export default function Grades() {
   const { userData } = useAuth();
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
   const [bimester, setBimester] = useState<number>(1);
   const [students, setStudents] = useState<any[]>([]);
   const [grades, setGrades] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
+
+  const availableSubjects = AVAILABLE_SUBJECTS;
+  const canEdit = userData?.role === 'admin' || (userData?.subjects || []).includes(selectedSubject);
 
   useEffect(() => {
     if (!userData?.schoolId) return;
@@ -26,7 +31,7 @@ export default function Grades() {
   }, [userData?.schoolId]);
 
   useEffect(() => {
-    if (!selectedClass || !userData?.schoolId) {
+    if (!selectedClass || !selectedSubject || !userData?.schoolId) {
       setStudents([]);
       setGrades({});
       return;
@@ -41,7 +46,8 @@ export default function Grades() {
       const qGrades = query(
         collection(db, 'grades'), 
         where('classId', '==', selectedClass),
-        where('bimester', '==', bimester)
+        where('bimester', '==', bimester),
+        where('subject', '==', selectedSubject)
       );
       const gradesSnap = await getDocs(qGrades);
       const gradesMap: Record<string, any> = {};
@@ -55,7 +61,7 @@ export default function Grades() {
     fetchGrades();
 
     return () => unsubStudents();
-  }, [selectedClass, bimester, userData?.schoolId]);
+  }, [selectedClass, bimester, selectedSubject, userData?.schoolId]);
 
   const handleGradeChange = (studentId: string, field: 'n1' | 'n2' | 'n3' | 'recovery', value: string) => {
     const numValue = value === '' ? '' : Number(value);
@@ -92,7 +98,10 @@ export default function Grades() {
   };
 
   const handleSave = async () => {
-    if (!selectedClass || !userData?.schoolId) return;
+    if (!selectedClass || !selectedSubject || !userData?.schoolId) {
+      toast.error('Selecione a turma e a disciplina.');
+      return;
+    }
     setLoading(true);
     
     try {
@@ -100,12 +109,13 @@ export default function Grades() {
         const studentGrades = grades[student.id];
         if (!studentGrades) return Promise.resolve();
 
-        const gradeId = `${selectedClass}_${student.id}_${bimester}`;
+        const gradeId = `${selectedClass}_${student.id}_${bimester}_${selectedSubject}`;
         const gradeData: any = {
           schoolId: userData.schoolId,
           classId: selectedClass,
           studentId: student.id,
           bimester: bimester,
+          subject: selectedSubject,
         };
 
         if (studentGrades.n1 !== '') gradeData.n1 = Number(studentGrades.n1);
@@ -133,7 +143,7 @@ export default function Grades() {
     <div className="bg-white shadow rounded-lg p-6">
       <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Lançamento de Notas</h3>
       
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Turma</label>
           <select
@@ -144,6 +154,19 @@ export default function Grades() {
             <option value="">Selecione uma turma</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Disciplina</label>
+          <select
+            value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)}
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+          >
+            <option value="">Selecione uma disciplina</option>
+            {availableSubjects.map((subject: string) => (
+              <option key={subject} value={subject}>{subject}</option>
             ))}
           </select>
         </div>
@@ -162,17 +185,24 @@ export default function Grades() {
         </div>
       </div>
 
-      {selectedClass && students.length > 0 && (
+      {selectedClass && selectedSubject && students.length > 0 && (
         <>
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-md font-medium text-gray-700">Alunos</h4>
-            <Link
-              to={`/teacher/report-cards/class/${selectedClass}`}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir Boletins da Turma
-            </Link>
+            <div className="flex items-center space-x-4">
+              {!canEdit && (
+                <span className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-full font-medium">
+                  Modo de visualização (somente leitura)
+                </span>
+              )}
+              <Link
+                to={`/teacher/report-cards/class/${selectedClass}`}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir Boletins da Turma
+              </Link>
+            </div>
           </div>
           <div className="overflow-x-auto mb-4">
             <table className="min-w-full divide-y divide-gray-200">
@@ -204,7 +234,8 @@ export default function Grades() {
                           step="0.1"
                           value={studentGrades.n1}
                           onChange={(e) => handleGradeChange(student.id, 'n1', e.target.value)}
-                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          disabled={!canEdit}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
@@ -215,7 +246,8 @@ export default function Grades() {
                           step="0.1"
                           value={studentGrades.n2}
                           onChange={(e) => handleGradeChange(student.id, 'n2', e.target.value)}
-                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          disabled={!canEdit}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
@@ -226,7 +258,8 @@ export default function Grades() {
                           step="0.1"
                           value={studentGrades.n3}
                           onChange={(e) => handleGradeChange(student.id, 'n3', e.target.value)}
-                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          disabled={!canEdit}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
@@ -237,7 +270,8 @@ export default function Grades() {
                           step="0.1"
                           value={studentGrades.recovery || ''}
                           onChange={(e) => handleGradeChange(student.id, 'recovery', e.target.value)}
-                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          disabled={!canEdit}
+                          className="w-20 text-center border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-center">
@@ -271,8 +305,8 @@ export default function Grades() {
           <div className="flex justify-end">
             <button
               onClick={handleSave}
-              disabled={loading}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={loading || !canEdit}
+              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading ? 'Salvando...' : 'Salvar Notas'}
             </button>

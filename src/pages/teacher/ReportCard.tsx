@@ -41,10 +41,12 @@ export default function ReportCard() {
           where('schoolId', '==', userData.schoolId)
         );
         const gradesSnap = await getDocs(qGrades);
-        const gradesMap: Record<number, any> = {};
+        const gradesMap: Record<string, Record<number, any>> = {};
         gradesSnap.docs.forEach(d => {
           const data = d.data();
-          gradesMap[data.bimester] = data;
+          const subject = data.subject || 'Geral';
+          if (!gradesMap[subject]) gradesMap[subject] = {};
+          gradesMap[subject][data.bimester] = data;
         });
         setGrades(gradesMap);
 
@@ -62,6 +64,7 @@ export default function ReportCard() {
   if (!student) return <div className="p-6">Aluno não encontrado.</div>;
 
   const bimesters = [1, 2, 3, 4];
+  const subjects = Object.keys(grades).sort();
 
   return (
     <div className="bg-white shadow rounded-lg p-6 max-w-4xl mx-auto">
@@ -102,41 +105,50 @@ export default function ReportCard() {
           </div>
         </div>
 
-        <table className="min-w-full border-collapse border border-gray-400">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Bimestre</th>
-              <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Nota 1</th>
-              <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Nota 2</th>
-              <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Nota 3</th>
-              <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Recuperação</th>
-              <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Média Final</th>
-              <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Situação</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bimesters.map(b => {
-              const g = grades[b] || {};
-              const avg = g.average !== undefined && g.average !== null ? g.average : '-';
-              const isApproved = avg !== '-' && avg >= 7;
-              const isFailed = avg !== '-' && avg < 7;
-              
-              return (
-                <tr key={b}>
-                  <td className="border border-gray-400 px-4 py-3 text-center font-medium">{b}º Bimestre</td>
-                  <td className="border border-gray-400 px-4 py-3 text-center">{g.n1 !== undefined ? g.n1 : '-'}</td>
-                  <td className="border border-gray-400 px-4 py-3 text-center">{g.n2 !== undefined ? g.n2 : '-'}</td>
-                  <td className="border border-gray-400 px-4 py-3 text-center">{g.n3 !== undefined ? g.n3 : '-'}</td>
-                  <td className="border border-gray-400 px-4 py-3 text-center text-amber-600 font-medium">{g.recovery !== undefined ? g.recovery : '-'}</td>
-                  <td className="border border-gray-400 px-4 py-3 text-center font-bold">{avg}</td>
-                  <td className={`border border-gray-400 px-4 py-3 text-center font-bold ${isApproved ? 'text-green-600' : isFailed ? 'text-red-600' : 'text-gray-500'}`}>
-                    {avg !== '-' ? (isApproved ? 'Aprovado' : 'Reprovado') : '-'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {subjects.length === 0 ? (
+          <p className="text-center text-gray-500 py-4">Nenhuma nota lançada para este aluno.</p>
+        ) : (
+          subjects.map(subject => (
+            <div key={subject} className="mb-8">
+              <h3 className="text-lg font-bold text-gray-800 mb-2 border-b border-gray-300 pb-1">{subject}</h3>
+              <table className="min-w-full border-collapse border border-gray-400">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Bimestre</th>
+                    <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Nota 1</th>
+                    <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Nota 2</th>
+                    <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Nota 3</th>
+                    <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Recuperação</th>
+                    <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Média Final</th>
+                    <th className="border border-gray-400 px-4 py-2 text-center font-bold text-gray-700">Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bimesters.map(b => {
+                    const g = grades[subject][b] || {};
+                    const avg = g.average !== undefined && g.average !== null ? g.average : '-';
+                    const isApproved = avg !== '-' && avg >= 7;
+                    const isFailed = avg !== '-' && avg < 7;
+                    
+                    return (
+                      <tr key={b}>
+                        <td className="border border-gray-400 px-4 py-3 text-center font-medium">{b}º Bimestre</td>
+                        <td className="border border-gray-400 px-4 py-3 text-center">{g.n1 !== undefined ? g.n1 : '-'}</td>
+                        <td className="border border-gray-400 px-4 py-3 text-center">{g.n2 !== undefined ? g.n2 : '-'}</td>
+                        <td className="border border-gray-400 px-4 py-3 text-center">{g.n3 !== undefined ? g.n3 : '-'}</td>
+                        <td className="border border-gray-400 px-4 py-3 text-center text-amber-600 font-medium">{g.recovery !== undefined ? g.recovery : '-'}</td>
+                        <td className="border border-gray-400 px-4 py-3 text-center font-bold">{avg}</td>
+                        <td className={`border border-gray-400 px-4 py-3 text-center font-bold ${isApproved ? 'text-green-600' : isFailed ? 'text-red-600' : 'text-gray-500'}`}>
+                          {avg !== '-' ? (isApproved ? 'Aprovado' : 'Reprovado') : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))
+        )}
 
         <div className="mt-16 flex justify-between px-12 print:px-0">
           <div className="text-center w-64">
