@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
 import { Link } from 'react-router-dom';
-import { FileText, Trash2, ArrowRightLeft, X } from 'lucide-react';
+import { FileText, Trash2, ArrowRightLeft, X, Edit2 } from 'lucide-react';
 
 export default function Students() {
   const { userData } = useAuth();
@@ -21,6 +21,10 @@ export default function Students() {
   const [transferStudent, setTransferStudent] = useState<any>(null);
   const [newClassId, setNewClassId] = useState('');
 
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [editName, setEditName] = useState('');
+  const [editEnrollment, setEditEnrollment] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -30,11 +34,15 @@ export default function Students() {
     const unsubStudents = onSnapshot(qStudents, (snapshot) => {
       setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching students:", error);
     });
 
     const qClasses = query(collection(db, 'classes'), where('schoolId', '==', userData.schoolId));
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
       setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error fetching classes:", error);
     });
 
     return () => {
@@ -86,6 +94,28 @@ export default function Students() {
       console.error(error);
       toast.error('Erro ao transferir aluno.');
     }
+  };
+
+  const handleEditStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent || !editName.trim()) return;
+    try {
+      await updateDoc(doc(db, 'students', editingStudent.id), {
+        name: editName,
+        enrollmentNumber: editEnrollment
+      });
+      toast.success('Aluno atualizado com sucesso!');
+      setEditingStudent(null);
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao atualizar aluno.');
+    }
+  };
+
+  const openEditModal = (student: any) => {
+    setEditingStudent(student);
+    setEditName(student.name);
+    setEditEnrollment(student.enrollmentNumber || '');
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,42 +220,107 @@ export default function Students() {
         {loading ? (
           <p>Carregando...</p>
         ) : (
-          <ul className="divide-y divide-gray-200">
-            {students.map((student) => {
-              const studentClass = classes.find(c => c.id === student.classId);
+          <div className="space-y-8">
+            {classes.map(c => {
+              const classStudents = students.filter(s => s.classId === c.id);
+              if (classStudents.length === 0) return null;
+              
               return (
-                <li key={student.id} className="py-4 flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{student.name}</p>
-                    <p className="text-sm text-gray-500">Matrícula: {student.enrollmentNumber}</p>
-                    <p className="text-sm text-gray-500">Turma: {studentClass?.name || 'Sem turma'}</p>
+                <div key={c.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h4 className="text-md font-semibold text-gray-800">Turma: {c.name}</h4>
                   </div>
-                  <div className="flex space-x-2">
-                    <Link
-                      to={`/teacher/report-card/${student.id}`}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      Boletim
-                    </Link>
-                    <button
-                      onClick={() => setTransferStudent(student)}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <ArrowRightLeft className="h-4 w-4 mr-1" />
-                      Transferir
-                    </button>
-                    <button
-                      onClick={() => handleDeleteStudent(student.id)}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
+                  <ul className="divide-y divide-gray-200">
+                    {classStudents.map((student) => (
+                      <li key={student.id} className="px-4 py-4 flex justify-between items-center hover:bg-gray-50">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                          <p className="text-sm text-gray-500">Matrícula: {student.enrollmentNumber}</p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Link
+                            to={`/teacher/report-card/${student.id}`}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            Boletim
+                          </Link>
+                          <button
+                            onClick={() => openEditModal(student)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <Edit2 className="h-4 w-4 mr-1" />
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => setTransferStudent(student)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <ArrowRightLeft className="h-4 w-4 mr-1" />
+                            Transferir
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStudent(student.id)}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               );
             })}
-          </ul>
+            
+            {/* Alunos sem turma */}
+            {students.filter(s => !s.classId || !classes.find(c => c.id === s.classId)).length > 0 && (
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-red-50 px-4 py-3 border-b border-red-200">
+                  <h4 className="text-md font-semibold text-red-800">Alunos sem Turma</h4>
+                </div>
+                <ul className="divide-y divide-gray-200">
+                  {students.filter(s => !s.classId || !classes.find(c => c.id === s.classId)).map((student) => (
+                    <li key={student.id} className="px-4 py-4 flex justify-between items-center hover:bg-gray-50">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                        <p className="text-sm text-gray-500">Matrícula: {student.enrollmentNumber}</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Link
+                          to={`/teacher/report-card/${student.id}`}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Boletim
+                        </Link>
+                        <button
+                          onClick={() => openEditModal(student)}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => setTransferStudent(student)}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          <ArrowRightLeft className="h-4 w-4 mr-1" />
+                          Transferir
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudent(student.id)}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -268,6 +363,57 @@ export default function Students() {
                 Transferir
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {editingStudent && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Editar Aluno</h3>
+              <button onClick={() => setEditingStudent(null)} className="text-gray-400 hover:text-gray-500">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <form onSubmit={handleEditStudent}>
+              <div className="space-y-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Matrícula</label>
+                  <input
+                    type="text"
+                    value={editEnrollment}
+                    onChange={(e) => setEditEnrollment(e.target.value)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!editName.trim()}
+                  className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

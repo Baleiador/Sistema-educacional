@@ -40,6 +40,8 @@ export default function Grades() {
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
       const allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setClasses(allClasses.filter((c: any) => userData?.role === 'admin' || (c.teacherIds && c.teacherIds.includes(userData?.uid))));
+    }, (error) => {
+      console.error("Error fetching classes:", error);
     });
     return () => unsubClasses();
   }, [userData?.schoolId]);
@@ -51,9 +53,15 @@ export default function Grades() {
       return;
     }
 
-    const qStudents = query(collection(db, 'students'), where('classId', '==', selectedClass));
+    const qStudents = query(
+      collection(db, 'students'), 
+      where('classId', '==', selectedClass),
+      where('schoolId', '==', userData.schoolId)
+    );
     const unsubStudents = onSnapshot(qStudents, (snapshot) => {
       setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error fetching students:", error);
     });
 
     const fetchGrades = async () => {
@@ -61,7 +69,8 @@ export default function Grades() {
         const qGrades = query(
           collection(db, 'grades'), 
           where('classId', '==', selectedClass),
-          where('subject', '==', selectedSubject)
+          where('subject', '==', selectedSubject),
+          where('schoolId', '==', userData.schoolId)
         );
         const gradesSnap = await getDocs(qGrades);
         const allGradesMap: Record<string, any> = {};
@@ -83,7 +92,8 @@ export default function Grades() {
           collection(db, 'grades'), 
           where('classId', '==', selectedClass),
           where('bimester', '==', bimester),
-          where('subject', '==', selectedSubject)
+          where('subject', '==', selectedSubject),
+          where('schoolId', '==', userData.schoolId)
         );
         const gradesSnap = await getDocs(qGrades);
         const gradesMap: Record<string, any> = {};

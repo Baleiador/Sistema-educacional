@@ -24,6 +24,8 @@ export default function Teachers() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setStaff(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching staff:", error);
     });
     return () => unsubscribe();
   }, [userData?.schoolId]);

@@ -20,6 +20,8 @@ export default function Attendance() {
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
       const allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setClasses(allClasses.filter((c: any) => userData?.role === 'admin' || (c.teacherIds && c.teacherIds.includes(userData?.uid))));
+    }, (error) => {
+      console.error("Error fetching classes:", error);
     });
     return () => unsubClasses();
   }, [userData?.schoolId]);
@@ -33,6 +35,8 @@ export default function Attendance() {
     const unsubStudents = onSnapshot(qStudents, (snapshot) => {
       const allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setStudents(allStudents.filter((s: any) => s.classId === selectedClass));
+    }, (error) => {
+      console.error("Error fetching students:", error);
     });
 
     // Load existing attendance

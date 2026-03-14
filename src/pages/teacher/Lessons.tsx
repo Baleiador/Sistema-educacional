@@ -29,6 +29,8 @@ export default function Lessons() {
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
       const allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setClasses(allClasses.filter((c: any) => userData?.role === 'admin' || (c.teacherIds && c.teacherIds.includes(userData?.uid))));
+    }, (error) => {
+      console.error("Error fetching classes:", error);
     });
     return () => unsubClasses();
   }, [userData?.schoolId]);
@@ -63,6 +65,8 @@ export default function Lessons() {
       // Sort in memory since we might not have a composite index yet
       lessons.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setPreviousLessons(lessons);
+    }, (error) => {
+      console.error("Error fetching lessons:", error);
     });
 
     return () => unsubLessons();

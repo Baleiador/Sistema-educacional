@@ -30,7 +30,11 @@ export default function ClassReportCards() {
         if (classDoc.exists()) setClassData(classDoc.data());
 
         // Fetch students
-        const qStudents = query(collection(db, 'students'), where('classId', '==', classId));
+        const qStudents = query(
+          collection(db, 'students'), 
+          where('classId', '==', classId),
+          where('schoolId', '==', userData.schoolId)
+        );
         const studentsSnap = await getDocs(qStudents);
         const studentsList = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
         // Sort students alphabetically
@@ -106,13 +110,15 @@ export default function ClassReportCards() {
           return (
             <div key={student.id} className={index < students.length - 1 ? "break-after-page mb-16 print:mb-0" : ""}>
               <div className="mb-8 border-b-2 border-gray-800 pb-6 flex justify-between items-start">
-                <div className="flex flex-col text-left text-sm text-gray-600">
+                <div className="flex items-center text-left text-sm text-gray-600">
                   {school?.logo && (
-                    <img src={school.logo} alt="Logo da Escola" className="h-16 w-auto mb-2 object-contain" />
+                    <img src={school.logo} alt="Logo da Escola" className="h-16 w-auto mr-4 object-contain" />
                   )}
-                  {school?.address && <p>{school.address}</p>}
-                  {school?.cnpj && <p>CNPJ: {school.cnpj}</p>}
-                  {school?.responsible && <p>Resp: {school.responsible}</p>}
+                  <div>
+                    {school?.address && <p>{school.address}</p>}
+                    {school?.cnpj && <p>CNPJ: {school.cnpj}</p>}
+                    {school?.responsible && <p>Resp: {school.responsible}</p>}
+                  </div>
                 </div>
                 <div className="text-right flex-1 ml-4">
                   <h1 className="text-3xl font-bold text-gray-900 uppercase tracking-wider">{school?.name || 'Escola'}</h1>

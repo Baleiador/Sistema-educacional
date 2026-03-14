@@ -183,22 +183,27 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="bg-white shadow rounded-lg p-6 flex flex-col items-center justify-center text-center">
-        {school?.logo ? (
-          <img src={school.logo} alt="Logo da Escola" className="h-32 w-auto object-contain mb-4 rounded-lg" />
-        ) : (
-          <div className="h-32 w-32 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <span className="text-gray-400 text-4xl">{school?.name?.charAt(0)}</span>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 w-full max-w-3xl">
+          {school?.logo ? (
+            <img src={school.logo} alt="Logo da Escola" className="h-32 w-auto object-contain rounded-lg" />
+          ) : (
+            <div className="h-32 w-32 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
+              <span className="text-gray-400 text-4xl">{school?.name?.charAt(0)}</span>
+            </div>
+          )}
+          
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <h3 className="text-2xl font-bold leading-6 text-gray-900 mb-2">{school?.name || 'Carregando...'}</h3>
+            
+            {(school?.address || school?.cnpj || school?.responsible) && (
+              <div className="text-sm text-gray-600 space-y-1">
+                {school.address && <p><strong>Endereço:</strong> {school.address}</p>}
+                {school.cnpj && <p><strong>CNPJ/MEI:</strong> {school.cnpj}</p>}
+                {school.responsible && <p><strong>Responsável:</strong> {school.responsible}</p>}
+              </div>
+            )}
           </div>
-        )}
-        <h3 className="text-2xl font-bold leading-6 text-gray-900">{school?.name || 'Carregando...'}</h3>
-        
-        {(school?.address || school?.cnpj || school?.responsible) && (
-          <div className="mt-4 text-sm text-gray-600 space-y-1">
-            {school.address && <p><strong>Endereço:</strong> {school.address}</p>}
-            {school.cnpj && <p><strong>CNPJ/MEI:</strong> {school.cnpj}</p>}
-            {school.responsible && <p><strong>Responsável:</strong> {school.responsible}</p>}
-          </div>
-        )}
+        </div>
 
         {userData?.role === 'admin' && school && (
           <div className="mt-6 p-4 bg-indigo-50 rounded-md inline-block border border-indigo-100">

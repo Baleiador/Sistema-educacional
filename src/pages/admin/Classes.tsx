@@ -24,6 +24,8 @@ export default function Classes() {
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
       setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching classes:", error);
     });
 
     const qTeachers = query(
@@ -33,6 +35,8 @@ export default function Classes() {
     );
     const unsubTeachers = onSnapshot(qTeachers, (snapshot) => {
       setTeachers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error fetching teachers:", error);
     });
 
     return () => {
