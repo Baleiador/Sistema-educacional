@@ -9,7 +9,8 @@ import {
   CheckSquare, 
   LogOut, 
   UserCircle,
-  FileText
+  FileText,
+  Settings
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -40,6 +41,7 @@ export default function Layout() {
     { name: 'Turmas', href: '/admin/classes', icon: BookOpen },
     { name: 'Alunos', href: '/admin/students', icon: GraduationCap },
     { name: 'Notas', href: '/teacher/grades', icon: FileText },
+    { name: 'Configurações', href: '/admin/settings', icon: Settings },
   ];
 
   const teacherLinks = [

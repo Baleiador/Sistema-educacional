@@ -46,7 +46,11 @@ service cloud.firestore {
              data.creatorId is string &&
              (!('academicYearStart' in data) || (data.academicYearStart is string && data.academicYearStart.size() == 10)) &&
              (!('academicYearEnd' in data) || (data.academicYearEnd is string && data.academicYearEnd.size() == 10)) &&
-             (!('logo' in data) || data.logo is string);
+             (!('logo' in data) || data.logo is string) &&
+             (!('address' in data) || data.address is string) &&
+             (!('cnpj' in data) || data.cnpj is string) &&
+             (!('responsible' in data) || data.responsible is string) &&
+             (!('gradingSystem' in data) || (data.gradingSystem is map && data.gradingSystem.keys().hasAll(['numberOfGrades', 'weights'])));
     }
 
     function isValidGrade(data) {
@@ -54,13 +58,19 @@ service cloud.firestore {
              data.schoolId is string && data.schoolId.size() > 0 &&
              data.classId is string && data.classId.size() > 0 &&
              data.studentId is string && data.studentId.size() > 0 &&
-             data.bimester is number && data.bimester >= 1 && data.bimester <= 4 &&
+             (
+               (data.bimester is number && data.bimester >= 1 && data.bimester <= 4) ||
+               (data.bimester is string && data.bimester == 'annual')
+             ) &&
              (!('subject' in data) || data.subject is string) &&
              (!('n1' in data) || data.n1 is number) &&
              (!('n2' in data) || data.n2 is number) &&
              (!('n3' in data) || data.n3 is number) &&
+             (!('n4' in data) || data.n4 is number) &&
+             (!('n5' in data) || data.n5 is number) &&
              (!('recovery' in data) || data.recovery is number) &&
-             (!('average' in data) || data.average is number);
+             (!('average' in data) || data.average is number) &&
+             (!('finalExam' in data) || data.finalExam is number);
     }
 
     function isValidUser(data) {
@@ -78,7 +88,8 @@ service cloud.firestore {
       return data.keys().hasAll(['name', 'schoolId']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.schoolId is string && data.schoolId.size() > 0 &&
-             (!('teacherIds' in data) || data.teacherIds is list);
+             (!('teacherIds' in data) || data.teacherIds is list) &&
+             (!('subjects' in data) || data.subjects is list);
     }
 
     function isValidStudent(data) {

@@ -192,10 +192,18 @@ export default function Dashboard() {
         )}
         <h3 className="text-2xl font-bold leading-6 text-gray-900">{school?.name || 'Carregando...'}</h3>
         
+        {(school?.address || school?.cnpj || school?.responsible) && (
+          <div className="mt-4 text-sm text-gray-600 space-y-1">
+            {school.address && <p><strong>Endereço:</strong> {school.address}</p>}
+            {school.cnpj && <p><strong>CNPJ/MEI:</strong> {school.cnpj}</p>}
+            {school.responsible && <p><strong>Responsável:</strong> {school.responsible}</p>}
+          </div>
+        )}
+
         {userData?.role === 'admin' && school && (
-          <div className="mt-4 p-4 bg-indigo-50 rounded-md inline-block">
+          <div className="mt-6 p-4 bg-indigo-50 rounded-md inline-block border border-indigo-100">
             <p className="text-indigo-700">
-              Código de Convite para Professores: <span className="font-bold">{school.inviteCode}</span>
+              Código de Convite para Professores: <span className="font-bold text-lg ml-2">{school.inviteCode}</span>
             </p>
           </div>
         )}

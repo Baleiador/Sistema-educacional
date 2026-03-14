@@ -3,6 +3,8 @@ import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc,
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { AVAILABLE_SUBJECTS } from '../../utils/subjects';
+import { X } from 'lucide-react';
 
 export default function Classes() {
   const { userData } = useAuth();
@@ -11,6 +13,9 @@ export default function Classes() {
   const [loading, setLoading] = useState(true);
   const [newClassName, setNewClassName] = useState('');
   const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [editingSubjects, setEditingSubjects] = useState<string | null>(null);
+  const [editSubjectsList, setEditSubjectsList] = useState<string[]>([]);
 
   useEffect(() => {
     if (!userData?.schoolId) return;
@@ -44,10 +49,12 @@ export default function Classes() {
         name: newClassName,
         schoolId: userData.schoolId,
         teacherIds: selectedTeachers,
+        subjects: selectedSubjects,
         createdAt: serverTimestamp(),
       });
       setNewClassName('');
       setSelectedTeachers([]);
+      setSelectedSubjects([]);
       toast.success('Turma adicionada com sucesso!');
     } catch (error) {
       toast.error('Erro ao adicionar turma.');
@@ -69,13 +76,37 @@ export default function Classes() {
     }
   };
 
+  const openSubjectsModal = (cls: any) => {
+    setEditingSubjects(cls.id);
+    setEditSubjectsList(cls.subjects || []);
+  };
+
+  const toggleEditSubject = (subject: string) => {
+    setEditSubjectsList(prev => 
+      prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
+    );
+  };
+
+  const saveSubjects = async () => {
+    if (!editingSubjects) return;
+    try {
+      await updateDoc(doc(db, 'classes', editingSubjects), {
+        subjects: editSubjectsList
+      });
+      toast.success('Disciplinas da turma atualizadas!');
+      setEditingSubjects(null);
+    } catch (error) {
+      toast.error('Erro ao atualizar disciplinas.');
+    }
+  };
+
   return (
     <div className="bg-white shadow rounded-lg p-6">
       <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Gerenciar Turmas</h3>
       
       <form onSubmit={handleAddClass} className="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
         <h4 className="text-sm font-medium text-gray-900 mb-4">Nova Turma</h4>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Turma</label>
             <input
@@ -109,6 +140,28 @@ export default function Classes() {
               {teachers.length === 0 && <span className="text-gray-500 text-xs">Nenhum professor cadastrado.</span>}
             </div>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Disciplinas (opcional)</label>
+            <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md bg-white p-2 space-y-2">
+              {AVAILABLE_SUBJECTS.map(subject => (
+                <label key={subject} className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedSubjects.includes(subject)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSubjects([...selectedSubjects, subject]);
+                      } else {
+                        setSelectedSubjects(selectedSubjects.filter(s => s !== subject));
+                      }
+                    }}
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>{subject}</span>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="mt-4 flex justify-end">
           <button
@@ -129,6 +182,7 @@ export default function Classes() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turma</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Professores Atribuídos</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disciplinas</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -158,10 +212,69 @@ export default function Classes() {
                       {teachers.length === 0 && <span>-</span>}
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {cls.subjects?.map((subject: string) => (
+                        <span key={subject} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                          {subject}
+                        </span>
+                      ))}
+                      {(!cls.subjects || cls.subjects.length === 0) && <span className="text-gray-400 italic">Nenhuma disciplina</span>}
+                    </div>
+                    <button
+                      onClick={() => openSubjectsModal(cls)}
+                      className="text-indigo-600 hover:text-indigo-900 text-xs font-medium"
+                    >
+                      Editar Disciplinas
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Subjects Modal */}
+      {editingSubjects && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Disciplinas da Turma</h3>
+              <button onClick={() => setEditingSubjects(null)} className="text-gray-400 hover:text-gray-500">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md p-3 space-y-2 mb-4">
+              {AVAILABLE_SUBJECTS.map(subject => (
+                <label key={subject} className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={editSubjectsList.includes(subject)}
+                    onChange={() => toggleEditSubject(subject)}
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                  />
+                  <span className="text-sm text-gray-700">{subject}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setEditingSubjects(null)}
+                className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveSubjects}
+                className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

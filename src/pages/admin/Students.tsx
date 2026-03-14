@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, writeBatch, doc, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, writeBatch, doc, where, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
 import { Link } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { FileText, Trash2, ArrowRightLeft, X } from 'lucide-react';
 
 export default function Students() {
   const { userData } = useAuth();
@@ -18,6 +18,9 @@ export default function Students() {
   const [enrollment, setEnrollment] = useState('');
   const [classId, setClassId] = useState('');
   
+  const [transferStudent, setTransferStudent] = useState<any>(null);
+  const [newClassId, setNewClassId] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,6 +59,32 @@ export default function Students() {
       toast.success('Aluno adicionado com sucesso!');
     } catch (error) {
       toast.error('Erro ao adicionar aluno.');
+    }
+  };
+
+  const handleDeleteStudent = async (studentId: string) => {
+    if (!window.confirm('Tem certeza que deseja remover este aluno? Esta ação não pode ser desfeita.')) return;
+    try {
+      await deleteDoc(doc(db, 'students', studentId));
+      toast.success('Aluno removido com sucesso!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao remover aluno.');
+    }
+  };
+
+  const handleTransferStudent = async () => {
+    if (!transferStudent || !newClassId) return;
+    try {
+      await updateDoc(doc(db, 'students', transferStudent.id), {
+        classId: newClassId
+      });
+      toast.success('Aluno transferido com sucesso!');
+      setTransferStudent(null);
+      setNewClassId('');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao transferir aluno.');
     }
   };
 
@@ -179,6 +208,19 @@ export default function Students() {
                       <FileText className="h-4 w-4 mr-1" />
                       Boletim
                     </Link>
+                    <button
+                      onClick={() => setTransferStudent(student)}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-1" />
+                      Transferir
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStudent(student.id)}
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </li>
               );
@@ -186,6 +228,49 @@ export default function Students() {
           </ul>
         )}
       </div>
+
+      {transferStudent && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Transferir Aluno</h3>
+              <button onClick={() => setTransferStudent(null)} className="text-gray-400 hover:text-gray-500">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Selecione a nova turma para o aluno <strong>{transferStudent.name}</strong>:
+              </p>
+              <select
+                value={newClassId}
+                onChange={(e) => setNewClassId(e.target.value)}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              >
+                <option value="">Selecione a Turma</option>
+                {classes.filter(c => c.id !== transferStudent.classId).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setTransferStudent(null)}
+                className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleTransferStudent}
+                disabled={!newClassId}
+                className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400"
+              >
+                Transferir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

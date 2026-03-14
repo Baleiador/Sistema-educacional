@@ -7,7 +7,18 @@
       "properties": {
         "name": { "type": "string" },
         "inviteCode": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "logo": { "type": "string" },
+        "address": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "responsible": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "gradingSystem": {
+          "type": "object",
+          "properties": {
+            "numberOfGrades": { "type": "number" },
+            "weights": { "type": "array", "items": { "type": "number" } }
+          }
+        }
       },
       "required": ["name", "inviteCode", "createdAt"]
     },
@@ -33,6 +44,7 @@
         "name": { "type": "string" },
         "schoolId": { "type": "string" },
         "teacherIds": { "type": "array", "items": { "type": "string" } },
+        "subjects": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "schoolId"]
@@ -77,6 +89,27 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["classId", "schoolId", "date", "content", "teacherId"]
+    },
+    "Grade": {
+      "title": "Grade",
+      "description": "A student's grades for a subject in a bimester",
+      "type": "object",
+      "properties": {
+        "schoolId": { "type": "string" },
+        "classId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "bimester": { "type": ["number", "string"] },
+        "subject": { "type": "string" },
+        "n1": { "type": "number" },
+        "n2": { "type": "number" },
+        "n3": { "type": "number" },
+        "n4": { "type": "number" },
+        "n5": { "type": "number" },
+        "recovery": { "type": "number" },
+        "average": { "type": "number" },
+        "finalExam": { "type": "number" }
+      },
+      "required": ["schoolId", "classId", "studentId", "bimester"]
     }
   },
   "firestore": {
@@ -103,6 +136,10 @@
     "/lessons/{lessonId}": {
       "schema": { "$ref": "#/entities/Lesson" },
       "description": "Lesson contents"
+    },
+    "/grades/{gradeId}": {
+      "schema": { "$ref": "#/entities/Grade" },
+      "description": "Student grades"
     }
   }
 }
