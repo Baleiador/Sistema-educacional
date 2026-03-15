@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, writeBatch, doc, where, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, writeBatch, doc, where, deleteDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -132,11 +132,47 @@ export default function Students() {
   };
 
   const handleSaveReport = async () => {
-    if (!reportStudent) return;
+    if (!reportStudent || !userData) return;
     try {
+      const reportContent = reportText;
+      
+      // Update the student document for backward compatibility
       await updateDoc(doc(db, 'students', reportStudent.id), {
-        report: reportText
+        report: reportContent
       });
+
+      // Find if a report document already exists for this student by this teacher
+      const q = query(
+        collection(db, 'documents'), 
+        where('studentId', '==', reportStudent.id), 
+        where('type', '==', 'text/report'),
+        where('uploadedBy', '==', userData.uid)
+      );
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        await addDoc(collection(db, 'documents'), {
+          name: `Relatório - ${reportStudent.name}`,
+          type: 'text/report',
+          size: reportContent.length,
+          data: reportContent,
+          schoolId: userData.schoolId,
+          uploadedBy: userData.uid,
+          authorName: userData.name,
+          studentId: reportStudent.id,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        const docId = snapshot.docs[0].id;
+        await updateDoc(doc(db, 'documents', docId), {
+          data: reportContent,
+          size: reportContent.length,
+          authorName: userData.name,
+          updatedAt: serverTimestamp()
+        });
+      }
+
       toast.success('Relatório salvo com sucesso!');
       setReportStudent(null);
       setReportText('');

@@ -127,7 +127,10 @@ service cloud.firestore {
              data.data is string &&
              data.schoolId is string && data.schoolId.size() > 0 &&
              data.uploadedBy is string && data.uploadedBy.size() > 0 &&
-             data.createdAt is timestamp;
+             data.createdAt is timestamp &&
+             (!('authorName' in data) || data.authorName is string) &&
+             (!('studentId' in data) || data.studentId is string) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
     // ===============================================================
@@ -201,7 +204,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (resource == null || resource.data.schoolId == getUserSchoolId() || isSuperAdmin());
       allow create: if (isAdmin() || isTeacher()) && isValidDocument(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() || isSuperAdmin();
       allow update: if (isAdmin() || isTeacher()) && isValidDocument(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId() || isSuperAdmin();
-      allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || (isTeacher() && resource.data.uploadedBy == request.auth.uid && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
     }
   }
 }
