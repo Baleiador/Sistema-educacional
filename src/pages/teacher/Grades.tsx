@@ -5,7 +5,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { Printer } from 'lucide-react';
-import { AVAILABLE_SUBJECTS } from '../../utils/subjects';
 
 export default function Grades() {
   const { userData } = useAuth();
@@ -20,7 +19,7 @@ export default function Grades() {
   const [school, setSchool] = useState<any>(null);
 
   const selectedClassData = classes.find(c => c.id === selectedClass);
-  const classSubjects = selectedClassData?.subjects || AVAILABLE_SUBJECTS;
+  const classSubjects = selectedClassData?.subjects || [];
   const availableSubjects = userData?.role === 'admin' 
     ? classSubjects 
     : classSubjects.filter((s: string) => (userData?.subjects || []).includes(s));

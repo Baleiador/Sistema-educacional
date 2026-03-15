@@ -52,6 +52,7 @@ export default function Layout() {
 
   const teacherLinks = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Alunos', href: '/admin/students', icon: GraduationCap },
     { name: 'Chamada', href: '/teacher/attendance', icon: CheckSquare },
     { name: 'Conteúdo de Aula', href: '/teacher/lessons', icon: BookOpen },
     { name: 'Documentos', href: '/admin/documents', icon: FolderOpen },

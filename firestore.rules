@@ -97,7 +97,8 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.classId is string && data.classId.size() > 0 &&
              data.schoolId is string && data.schoolId.size() > 0 &&
-             (!('enrollmentNumber' in data) || (data.enrollmentNumber is string && data.enrollmentNumber.size() <= 50));
+             (!('enrollmentNumber' in data) || (data.enrollmentNumber is string && data.enrollmentNumber.size() <= 50)) &&
+             (!('report' in data) || data.report is string);
     }
 
     function isValidAttendance(data) {
@@ -169,7 +170,9 @@ service cloud.firestore {
     match /students/{studentId} {
       allow read: if isAuthenticated() && (resource == null || resource.data.schoolId == getUserSchoolId() || isSuperAdmin());
       allow create: if (isAdmin() && isValidStudent(request.resource.data) && request.resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
-      allow update: if (isAdmin() && isValidStudent(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
+      allow update: if (isAdmin() && isValidStudent(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId()) || 
+                       (isTeacher() && isValidStudent(request.resource.data) && request.resource.data.schoolId == getUserSchoolId() && resource.data.schoolId == getUserSchoolId() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['report'])) ||
+                       isSuperAdmin();
       allow delete: if (isAdmin() && resource.data.schoolId == getUserSchoolId()) || isSuperAdmin();
     }
 

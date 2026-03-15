@@ -3,7 +3,6 @@ import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc,
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { AVAILABLE_SUBJECTS } from '../../utils/subjects';
 import { X, Trash2 } from 'lucide-react';
 
 export default function Classes() {
@@ -25,7 +24,7 @@ export default function Classes() {
     import('firebase/firestore').then(({ getDoc }) => {
       getDoc(doc(db, 'schools', userData.schoolId as string)).then(docSnap => {
         if (docSnap.exists()) {
-          setSchoolSubjects(docSnap.data().subjects || AVAILABLE_SUBJECTS);
+          setSchoolSubjects(docSnap.data().subjects || []);
         }
       });
     });
