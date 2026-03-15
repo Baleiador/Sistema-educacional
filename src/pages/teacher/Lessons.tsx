@@ -28,7 +28,9 @@ export default function Lessons() {
     const qClasses = query(collection(db, 'classes'), where('schoolId', '==', userData.schoolId));
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
       const allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      setClasses(allClasses.filter((c: any) => userData?.role === 'admin' || (c.teacherIds && c.teacherIds.includes(userData?.uid))));
+      const filtered = allClasses.filter((c: any) => userData?.role === 'admin' || (c.teacherIds && c.teacherIds.includes(userData?.uid)));
+      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setClasses(filtered);
     }, (error) => {
       console.error("Error fetching classes:", error);
     });

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, where } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { AVAILABLE_SUBJECTS } from '../../utils/subjects';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 
 export default function Classes() {
   const { userData } = useAuth();
@@ -16,13 +16,25 @@ export default function Classes() {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [editingSubjects, setEditingSubjects] = useState<string | null>(null);
   const [editSubjectsList, setEditSubjectsList] = useState<string[]>([]);
+  const [schoolSubjects, setSchoolSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     if (!userData?.schoolId) return;
 
+    // Fetch school to get subjects
+    import('firebase/firestore').then(({ getDoc }) => {
+      getDoc(doc(db, 'schools', userData.schoolId as string)).then(docSnap => {
+        if (docSnap.exists()) {
+          setSchoolSubjects(docSnap.data().subjects || AVAILABLE_SUBJECTS);
+        }
+      });
+    });
+
     const qClasses = query(collection(db, 'classes'), where('schoolId', '==', userData.schoolId));
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
-      setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const classesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      classesList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setClasses(classesList);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching classes:", error);
@@ -34,7 +46,9 @@ export default function Classes() {
       where('schoolId', '==', userData.schoolId)
     );
     const unsubTeachers = onSnapshot(qTeachers, (snapshot) => {
-      setTeachers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const teachersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      teachersList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setTeachers(teachersList);
     }, (error) => {
       console.error("Error fetching teachers:", error);
     });
@@ -104,6 +118,17 @@ export default function Classes() {
     }
   };
 
+  const deleteClass = async (classId: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta turma?')) {
+      try {
+        await deleteDoc(doc(db, 'classes', classId));
+        toast.success('Turma excluída com sucesso!');
+      } catch (error) {
+        toast.error('Erro ao excluir turma.');
+      }
+    }
+  };
+
   return (
     <div className="bg-white shadow rounded-lg p-6">
       <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Gerenciar Turmas</h3>
@@ -147,7 +172,7 @@ export default function Classes() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Disciplinas (opcional)</label>
             <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md bg-white p-2 space-y-2">
-              {AVAILABLE_SUBJECTS.map(subject => (
+              {schoolSubjects.map(subject => (
                 <label key={subject} className="flex items-center space-x-2 text-sm">
                   <input
                     type="checkbox"
@@ -187,6 +212,7 @@ export default function Classes() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turma</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Professores Atribuídos</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disciplinas</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -232,6 +258,15 @@ export default function Classes() {
                       Editar Disciplinas
                     </button>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => deleteClass(cls.id)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Excluir Turma"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -251,7 +286,7 @@ export default function Classes() {
             </div>
             
             <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md p-3 space-y-2 mb-4">
-              {AVAILABLE_SUBJECTS.map(subject => (
+              {schoolSubjects.map(subject => (
                 <label key={subject} className="flex items-center space-x-3">
                   <input
                     type="checkbox"

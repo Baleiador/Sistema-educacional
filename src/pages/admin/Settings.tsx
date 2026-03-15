@@ -3,6 +3,8 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { Trash2, Plus, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Settings() {
   const { userData } = useAuth();
@@ -19,6 +21,10 @@ export default function Settings() {
   const [cnpj, setCnpj] = useState('');
   const [responsible, setResponsible] = useState('');
 
+  // Subjects settings
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [newSubject, setNewSubject] = useState('');
+
   useEffect(() => {
     if (userData?.schoolId) {
       getDoc(doc(db, 'schools', userData.schoolId)).then(docSnap => {
@@ -28,6 +34,7 @@ export default function Settings() {
           setAddress(data.address || '');
           setCnpj(data.cnpj || '');
           setResponsible(data.responsible || '');
+          setSubjects(data.subjects || []);
           if (data.gradingSystem) {
             setNumberOfGrades(data.gradingSystem.numberOfGrades || 3);
             setWeights(data.gradingSystem.weights || [1, 1, 1]);
@@ -37,6 +44,17 @@ export default function Settings() {
       });
     }
   }, [userData?.schoolId]);
+
+  const handleAddSubject = () => {
+    if (newSubject.trim() && !subjects.includes(newSubject.trim())) {
+      setSubjects([...subjects, newSubject.trim()]);
+      setNewSubject('');
+    }
+  };
+
+  const handleRemoveSubject = (subjectToRemove: string) => {
+    setSubjects(subjects.filter(s => s !== subjectToRemove));
+  };
 
   const handleNumberOfGradesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const num = parseInt(e.target.value);
@@ -68,6 +86,7 @@ export default function Settings() {
         address,
         cnpj,
         responsible,
+        subjects,
         gradingSystem: {
           numberOfGrades,
           weights
@@ -133,6 +152,47 @@ export default function Settings() {
         </div>
 
         <div className="pt-4">
+          <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Disciplinas</h3>
+          <div className="mb-4">
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddSubject()}
+                placeholder="Nova disciplina (ex: Matemática)"
+                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+              />
+              <button
+                onClick={handleAddSubject}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {subjects.map((subject) => (
+                <span key={subject} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                  {subject}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSubject(subject)}
+                    className="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-500 focus:outline-none focus:bg-gray-500 focus:text-white"
+                  >
+                    <span className="sr-only">Remover disciplina</span>
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              {subjects.length === 0 && (
+                <span className="text-sm text-gray-500 italic">Nenhuma disciplina cadastrada.</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4">
           <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Sistema de Notas</h3>
           
           <div className="mb-4">
@@ -178,6 +238,22 @@ export default function Settings() {
               A média do bimestre será calculada como uma média ponderada usando estes pesos. Se todos os pesos forem iguais (ex: 1), será uma média aritmética simples.
             </p>
           </div>
+        </div>
+
+        <div className="pt-4">
+          <div className="flex justify-between items-center mb-4 border-b pb-2">
+            <h3 className="text-lg font-medium text-gray-900">Documentos</h3>
+            <Link
+              to="/admin/documents"
+              className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Acessar Menu de Documentos
+              <ExternalLink className="ml-1 h-4 w-4" />
+            </Link>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Gerencie os documentos da escola no menu dedicado. Lá você pode fazer upload de arquivos e disponibilizá-los para a equipe.
+          </p>
         </div>
 
         <div className="pt-4 flex justify-end">

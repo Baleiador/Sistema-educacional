@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
 import { Link } from 'react-router-dom';
-import { FileText, Trash2, ArrowRightLeft, X, Edit2 } from 'lucide-react';
+import { FileText, Trash2, ArrowRightLeft, X, Edit2, MessageSquare } from 'lucide-react';
 
 export default function Students() {
   const { userData } = useAuth();
@@ -25,6 +25,9 @@ export default function Students() {
   const [editName, setEditName] = useState('');
   const [editEnrollment, setEditEnrollment] = useState('');
 
+  const [reportStudent, setReportStudent] = useState<any>(null);
+  const [reportText, setReportText] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -32,7 +35,9 @@ export default function Students() {
 
     const qStudents = query(collection(db, 'students'), where('schoolId', '==', userData.schoolId));
     const unsubStudents = onSnapshot(qStudents, (snapshot) => {
-      setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      studentsList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setStudents(studentsList);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching students:", error);
@@ -40,7 +45,9 @@ export default function Students() {
 
     const qClasses = query(collection(db, 'classes'), where('schoolId', '==', userData.schoolId));
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
-      setClasses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const classesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      classesList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setClasses(classesList);
     }, (error) => {
       console.error("Error fetching classes:", error);
     });
@@ -116,6 +123,26 @@ export default function Students() {
     setEditingStudent(student);
     setEditName(student.name);
     setEditEnrollment(student.enrollmentNumber || '');
+  };
+
+  const openReportModal = (student: any) => {
+    setReportStudent(student);
+    setReportText(student.report || '');
+  };
+
+  const handleSaveReport = async () => {
+    if (!reportStudent) return;
+    try {
+      await updateDoc(doc(db, 'students', reportStudent.id), {
+        report: reportText
+      });
+      toast.success('Relatório salvo com sucesso!');
+      setReportStudent(null);
+      setReportText('');
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao salvar relatório.');
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,6 +265,13 @@ export default function Students() {
                           <p className="text-sm text-gray-500">Matrícula: {student.enrollmentNumber}</p>
                         </div>
                         <div className="flex space-x-2">
+                          <button
+                            onClick={() => openReportModal(student)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Relatório
+                          </button>
                           <Link
                             to={`/teacher/report-card/${student.id}`}
                             className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -287,6 +321,13 @@ export default function Students() {
                         <p className="text-sm text-gray-500">Matrícula: {student.enrollmentNumber}</p>
                       </div>
                       <div className="flex space-x-2">
+                        <button
+                            onClick={() => openReportModal(student)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Relatório
+                        </button>
                         <Link
                           to={`/teacher/report-card/${student.id}`}
                           className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -414,6 +455,47 @@ export default function Students() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {reportStudent && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Relatório Individual - {reportStudent.name}</h3>
+              <button onClick={() => setReportStudent(null)} className="text-gray-400 hover:text-gray-500">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="space-y-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações e Relatório</label>
+                <textarea
+                  value={reportText}
+                  onChange={(e) => setReportText(e.target.value)}
+                  rows={10}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                  placeholder="Escreva aqui as observações sobre o aluno..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setReportStudent(null)}
+                className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveReport}
+                className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Salvar Relatório
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -19,7 +19,9 @@ export default function Attendance() {
     const qClasses = query(collection(db, 'classes'), where('schoolId', '==', userData.schoolId));
     const unsubClasses = onSnapshot(qClasses, (snapshot) => {
       const allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      setClasses(allClasses.filter((c: any) => userData?.role === 'admin' || (c.teacherIds && c.teacherIds.includes(userData?.uid))));
+      const filtered = allClasses.filter((c: any) => userData?.role === 'admin' || (c.teacherIds && c.teacherIds.includes(userData?.uid)));
+      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setClasses(filtered);
     }, (error) => {
       console.error("Error fetching classes:", error);
     });
@@ -34,7 +36,9 @@ export default function Attendance() {
     const qStudents = query(collection(db, 'students'), where('schoolId', '==', userData.schoolId));
     const unsubStudents = onSnapshot(qStudents, (snapshot) => {
       const allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      setStudents(allStudents.filter((s: any) => s.classId === selectedClass));
+      const filtered = allStudents.filter((s: any) => s.classId === selectedClass);
+      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setStudents(filtered);
     }, (error) => {
       console.error("Error fetching students:", error);
     });
