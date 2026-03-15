@@ -12,6 +12,7 @@ export default function Teachers() {
   const [editingSubjects, setEditingSubjects] = useState<string | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [schoolSubjects, setSchoolSubjects] = useState<string[]>([]);
+  const [teacherToDelete, setTeacherToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userData?.schoolId) return;
@@ -81,17 +82,14 @@ export default function Teachers() {
     }
   };
 
-  const deleteTeacher = async (teacherId: string) => {
-    if (window.confirm('Tem certeza que deseja remover este membro da equipe da sua escola?')) {
-      try {
-        await updateDoc(doc(db, 'users', teacherId), {
-          schoolId: null,
-          role: 'student' // Reset role to prevent admin access
-        });
-        toast.success('Membro removido com sucesso!');
-      } catch (error) {
-        toast.error('Erro ao remover membro.');
-      }
+  const deleteTeacher = async () => {
+    if (!teacherToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'users', teacherToDelete));
+      toast.success('Membro removido com sucesso!');
+      setTeacherToDelete(null);
+    } catch (error) {
+      toast.error('Erro ao remover membro.');
     }
   };
 
@@ -169,7 +167,7 @@ export default function Teachers() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     {member.id !== userData?.uid && (
                       <button
-                        onClick={() => deleteTeacher(member.id)}
+                        onClick={() => setTeacherToDelete(member.id)}
                         className="text-red-600 hover:text-red-900"
                         title="Remover da Escola"
                       >
@@ -218,6 +216,39 @@ export default function Teachers() {
                 className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
               >
                 Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {teacherToDelete && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Remover Membro</h3>
+              <button onClick={() => setTeacherToDelete(null)} className="text-gray-400 hover:text-gray-500">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                Tem certeza que deseja remover este membro da equipe da sua escola?
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setTeacherToDelete(null)}
+                className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={deleteTeacher}
+                className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              >
+                Remover
               </button>
             </div>
           </div>

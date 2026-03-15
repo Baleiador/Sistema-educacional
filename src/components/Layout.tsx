@@ -13,7 +13,8 @@ import {
   Settings,
   Menu,
   X,
-  FolderOpen
+  FolderOpen,
+  BookOpenCheck
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -46,6 +47,7 @@ export default function Layout() {
     { name: 'Alunos', href: '/admin/students', icon: GraduationCap },
     { name: 'Histórico de Chamadas', href: '/admin/attendance-history', icon: CheckSquare },
     { name: 'Documentos', href: '/admin/documents', icon: FolderOpen },
+    { name: 'Disciplinas', href: '/admin/subjects', icon: BookOpenCheck },
     { name: 'Notas', href: '/teacher/grades', icon: FileText },
     { name: 'Configurações', href: '/admin/settings', icon: Settings },
   ];

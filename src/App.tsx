@@ -20,6 +20,7 @@ import Grades from './pages/teacher/Grades';
 import ReportCard from './pages/teacher/ReportCard';
 import ClassReportCards from './pages/teacher/ClassReportCards';
 import Settings from './pages/admin/Settings';
+import Subjects from './pages/admin/Subjects';
 import AttendanceHistory from './pages/admin/AttendanceHistory';
 import Documents from './pages/admin/Documents';
 
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="admin/students" element={<Students />} />
             <Route path="admin/attendance-history" element={<AttendanceHistory />} />
             <Route path="admin/documents" element={<Documents />} />
+            <Route path="admin/subjects" element={<Subjects />} />
             <Route path="admin/settings" element={<Settings />} />
             <Route path="teacher/attendance" element={<Attendance />} />
             <Route path="teacher/lessons" element={<Lessons />} />
